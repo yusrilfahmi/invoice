@@ -14,69 +14,89 @@ class InvoiceController extends Controller
     // Menampilkan form
     public function create()
     {
-        return view('invoice.create');
+        // return view('invoice.create');
+        $customers = Customer::orderBy('name')->get();
+
+    // Kirim data $customers ke view
+    return view('invoice.create', ['customers' => $customers]);
     }
 
     // Menyimpan data & membuat PDF
     public function store(Request $request)
-    {
-        // Validasi data yang masuk dari form
-        $request->validate([
-            'customer_name' => 'required|string|max:255',
-            'address_name' => 'required|string|max:255',
-            'invoice_date' => 'required|date',
-            'items' => 'required|array|min:1',
-            'items.*.name' => 'required|string',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric|min:0',
+{
+    // Tambahkan validasi untuk alamat pelanggan yang sudah ada
+    $request->validate([
+        'customer_id' => 'required_without:new_customer_name|nullable|exists:customers,id',
+        'customer_address' => 'nullable|string|max:255', // Validasi untuk alamat yang diedit
+        'new_customer_name' => 'required_without:customer_id|nullable|string|max:255',
+        'new_customer_address' => 'required_with:new_customer_name|nullable|string|max:255',
+        'invoice_date' => 'required|date',
+        'items' => 'required|array|min:1',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $customer = null;
+
+        if ($request->filled('new_customer_name')) {
+            // Logika untuk pelanggan baru (tetap sama)
+            $customer = Customer::create([
+                'name' => $request->new_customer_name,
+                'address' => $request->new_customer_address,
+            ]);
+        } else {
+            // --- AWAL PERUBAHAN LOGIKA UNTUK PELANGGAN LAMA ---
+            $customer = Customer::findOrFail($request->customer_id);
+
+            // Cek jika ada alamat baru yang dikirim dari form, lalu perbarui
+            if ($request->filled('customer_address')) {
+                $customer->address = $request->customer_address;
+                $customer->save(); // Simpan perubahan alamat ke database
+            }
+            // --- AKHIR PERUBAHAN ---
+        }
+
+        // Sisa logika penyimpanan invoice tetap sama
+        $totalAmount = 0;
+        foreach ($request->items as $item) {
+            $totalAmount += $item['quantity'] * $item['price'];
+        }
+
+        $invoice = Invoice::create([
+            'customer_id' => $customer->id,
+            'invoice_number' => 'INV-' . time(),
+            'invoice_date' => $request->invoice_date,
+            'total_amount' => $totalAmount,
         ]);
 
-        // Gunakan transaction untuk memastikan semua data berhasil disimpan
-        DB::beginTransaction();
-        try {
-            // Cari atau buat customer baru
-            $customer = Customer::updateOrCreate(
-            ['name' => $request->customer_name],
-            ['address' => $request->address_name]
-        );
-            // Hitung total dari semua item
-            $totalAmount = 0;
-            foreach ($request->items as $item) {
-                $totalAmount += $item['quantity'] * $item['price'];
-            }
+        foreach ($request->items as $itemData) {
+            // Ambil tanggal dari form (misal: "2025-07-26")
+            $itemDate = $itemData['name'];
 
-            // Simpan data utama ke tabel 'invoices'
-            $invoice = Invoice::create([
-                'customer_id' => $customer->id,
-                'invoice_number' => 'INV-' . time(), // Nanti bisa dibuat lebih baik
-                'invoice_date' => $request->invoice_date,
-                'total_amount' => $totalAmount,
+            // Buat format nama item yang baru
+            $formattedItemName = 'pembuangan sampah pemukiman tanggal ' . Carbon::parse($itemDate)->format('d/m/Y');
+
+            // Simpan data dengan nama item yang sudah diformat
+            $invoice->items()->create([
+                'name' => $formattedItemName, // Gunakan nama yang sudah diformat
+                'quantity' => $itemData['quantity'],
+                'price' => $itemData['price'],
+                'subtotal' => $itemData['quantity'] * $itemData['price'],
             ]);
+        }
 
-            // Simpan setiap item ke tabel 'invoice_items'
-            foreach ($request->items as $itemData) {
-    $invoice->items()->create([
-        'name' => $itemData['name'],
-        'quantity' => $itemData['quantity'],
-        'price' => $itemData['price'],
-        // Tambahkan baris ini untuk menyimpan subtotal per item
-        'subtotal' => $itemData['quantity'] * $itemData['price'], 
-    ]);
+        DB::commit();
+
+        return redirect()->route('invoice.output', ['invoice' => $invoice, 'action' => $request->action]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withErrors(['error' => 'Gagal menyimpan invoice: ' . $e->getMessage()]);
+    }
 }
 
-            DB::commit(); // Jika semua berhasil, simpan permanen
-
-            // Arahkan ke halaman download PDF
-            return redirect()->route('invoice.output', ['invoice' => $invoice, 'action' => $request->action]);
-
-        } catch (\Exception $e) {
-            DB::rollBack(); // Jika ada error, batalkan semua penyimpanan
-            return back()->withErrors(['error' => 'Gagal menyimpan invoice: ' . $e->getMessage()]);
-        }
-    }
-
     // Membuat dan men-download PDF
-    public function downloadPDF(Invoice $invoice, $action)
+    public function handleOutput(Invoice $invoice, $action)
     {
         // Load relasi agar bisa diakses di view PDF
         $invoice->load('customer', 'items'); 

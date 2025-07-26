@@ -31,14 +31,33 @@
             <div x-data="invoiceForm()">
                 {{-- Info Pelanggan & Tanggal --}}
                 <div style="display: flex; gap: 2rem; margin-bottom: 1rem;">
-                    <div style="flex: 1;">
-                        <label for="customer_name">Nama Pelanggan:</label>
-                        <input type="text" id="customer_name" name="customer_name" required>
+                    <div style="flex: 1;" x-show="!isNewCustomer">
+                        <label for="customer_id">Pilih Pelanggan:</label>
+                        <select id="customer_id" name="customer_id" x-model="selectedCustomerId" @change="updateCustomerData()">
+                            <option value="">-- Pilih Pelanggan --</option>
+                            @foreach($customers as $customer)
+                                <option value="{{ $customer->id }}" data-address="{{ $customer->address }}">{{ $customer->name }}</option>
+                            @endforeach
+                        </select>
+                        <input type="text" name="customer_address" x-model="selectedCustomerAddress" placeholder="Alamat akan terisi otomatis">
                     </div>
-                    <div style="flex: 1;">
-                        <label for="address_name">Alamat Pelanggan:</label>
-                        <input type="text" id="address_name" name="address_name" required>
+
+                    {{-- Input untuk Pelanggan Baru --}}
+                    <div style="flex: 1;" x-show="isNewCustomer">
+                        <label for="new_customer_name">Nama Pelanggan Baru:</label>
+                        <input type="text" name="new_customer_name" placeholder="Masukkan nama pelanggan baru">
                     </div>
+                    <div style="flex: 1;" x-show="isNewCustomer">
+                        <label for="new_customer_address">Alamat Pelanggan Baru:</label>
+                        <input type="text" name="new_customer_address" placeholder="Masukkan alamat pelanggan baru">
+                    </div>
+
+                    {{-- Checkbox untuk Beralih Mode --}}
+                    <div style="align-self: flex-end; margin-bottom: 1rem;">
+                        <input type="checkbox" id="new_customer_toggle" x-model="isNewCustomer">
+                        <label for="new_customer_toggle" style="font-weight: normal; display: inline;">Pelanggan Baru?</label>
+                    </div>
+
                     <div style="flex: 1;">
                         <label for="invoice_date">Tanggal Invoice:</label>
                         <input type="date" id="invoice_date" name="invoice_date" value="{{ date('Y-m-d') }}" required>
@@ -59,7 +78,7 @@
                     <tbody>
                         <template x-for="(item, index) in items" :key="index">
                             <tr>
-                                <td><input type="text" x-model="item.name" :name="`items[${index}][name]`" required></td>
+                                <td><input type="date" x-model="item.name" :name="`items[${index}][name]`" required></td>
                                 <td><input type="number" x-model.number="item.quantity" :name="`items[${index}][quantity]`" @input="calculateSubtotal(index)" min="1" required></td>
                                 <td><input type="number" x-model.number="item.price" :name="`items[${index}][price]`" @input="calculateSubtotal(index)" min="0" required></td>
                                 <td><span x-text="formatRupiah(item.subtotal)"></span></td>
@@ -93,21 +112,53 @@
     </div>
 
     <script>
-        function invoiceForm() {
-            return {
-                items: [{ name: '', quantity: 1, price: 0, subtotal: 0 }],
-                total: 0,
-                addItem() { this.items.push({ name: '', quantity: 1, price: 0, subtotal: 0 }); },
-                removeItem(index) { this.items.splice(index, 1); this.calculateTotal(); },
-                calculateSubtotal(index) {
-                    const item = this.items[index];
-                    item.subtotal = item.quantity * item.price;
-                    this.calculateTotal();
-                },
-                calculateTotal() { this.total = this.items.reduce((acc, item) => acc + item.subtotal, 0); },
-                formatRupiah(number) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number); }
+  function invoiceForm() {
+    // Pindahkan deklarasi variabel 'today' ke sini
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Objek yang di-return hanya berisi properti dan method
+    return {
+        // DATA UNTUK BARIS ITEM
+        items: [{ name: today, quantity: 1, price: 300_000, subtotal: 300_000 }],
+        total: 0,
+
+        // DATA UNTUK DROPDOWN PELANGGAN
+        isNewCustomer: false,
+        selectedCustomerId: '',
+        selectedCustomerAddress: '',
+        customers: @json($customers),
+
+        // FUNGSI UNTUK DROPDOWN PELANGGAN
+        updateCustomerData() {
+            if (!this.selectedCustomerId) {
+                this.selectedCustomerAddress = '';
+                return;
             }
+            const selectedCustomer = this.customers.find(c => c.id == this.selectedCustomerId);
+            this.selectedCustomerAddress = selectedCustomer ? selectedCustomer.address : '';
+        },
+
+        // FUNGSI UNTUK BARIS ITEM
+        addItem() {
+            this.items.push({ name: today, quantity: 1, price: 300_000, subtotal: 300_000 });
+        },
+        removeItem(index) {
+            this.items.splice(index, 1);
+            this.calculateTotal();
+        },
+        calculateSubtotal(index) {
+            const item = this.items[index];
+            item.subtotal = item.quantity * item.price;
+            this.calculateTotal();
+        },
+        calculateTotal() {
+            this.total = this.items.reduce((acc, item) => acc + item.subtotal, 0);
+        },
+        formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
         }
+    }
+}
     </script>
     {{-- Letakkan kode ini di bawah <h1> --}}
 

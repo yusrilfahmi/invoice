@@ -67,15 +67,25 @@
         
         {{-- BAGIAN HEADER --}}
         <table class="info-table">
-            <tr>
-                <td style="width: 50%;">
-                    Tanggal: {{ \Carbon\Carbon::parse($invoice->invoice_date)->format('d/m/Y') }}
-                </td>
-                <td style="width: 50%; text-align: right;">
-                    <div class="invoice-title">INVOICE</div>
-                </td>
-            </tr>
-        </table>
+    <tr>
+        {{-- Mendorong tanggal ke bawah, rata kiri --}}
+        <td style="width: 50%; vertical-align: bottom;">
+            Tanggal: {{ \Carbon\Carbon::parse($invoice->invoice_date)->format('d/m/Y') }}
+        </td>
+
+        {{-- Mendorong judul ke bawah, rata kanan --}}
+        <td style="width: 50%; text-align: right; vertical-align: bottom;">
+            <div class="invoice-title">
+                @if($invoice->type === 'retribusi')
+                    INVOICE <br>
+                    RETRIBUSI
+                @else
+                    INVOICE
+                @endif
+            </div>
+        </td>
+    </tr>
+</table>
 
         <hr>
 
@@ -98,30 +108,52 @@
         
         {{-- BAGIAN TABEL ITEM --}}
         <table class="items-table">
-            <thead>
-                <tr>
-                    <th>Nama</th>
-                    <th>Jumlah</th>
-                    <th>Harga Satuan<br>
-                      Per Rit</th>
-                    <th>SubTotal</th>
-                    <th>PPN</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($invoice->items as $item)
-                  <tr>
-                      <td>{{ $item->name }}</td>
-                      <td style="text-align: center;">{{ $item->quantity }}</td>
-                      <td style="text-align: right;">{{ number_format($item->price, 0, ',', '.') }}</td>
-                      {{-- Menghitung Jumlah * Harga --}}
-                      <td style="text-align: right;">{{ number_format($item->quantity * $item->price, 0, ',', '.') }}</td>
-                      {{-- Menampilkan tanda strip (-) --}}
-                      <td style="text-align: center;">-</td>
-                  </tr>
-                  @endforeach
-            </tbody>
-        </table>
+    <thead>
+        <tr>
+            <th>@if($invoice->type === 'retribusi') Tanggal @else Nama @endif</th>
+            <th>@if($invoice->type === 'retribusi') Satuan Berat (Kg) @else Jumlah @endif</th>
+
+            {{-- Sembunyikan Harga Satuan jika retribusi --}}
+            @if($invoice->type !== 'retribusi')
+                <th>Harga Satuan Per Rit</th>
+            @endif
+
+            <th>SubTotal</th>
+
+            {{-- TAMBAHKAN KEMBALI BLOK INI --}}
+            @if($invoice->type !== 'retribusi')
+                <th>PPN</th>
+            @endif
+            {{-- AKHIR BLOK TAMBAHAN --}}
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($invoice->items as $item)
+        <tr>
+            <td>{{ $item->name }}</td>
+            <td style="text-align: center;">{{ $item->quantity }}</td>
+
+            {{-- Sembunyikan Harga Satuan jika retribusi --}}
+            @if($invoice->type !== 'retribusi')
+                <td style="text-align: right;">{{ number_format(350000, 0, ',', '.') }}</td>
+            @endif
+
+            <td style="text-align: right;">
+                @if($invoice->type === 'retribusi')
+                    {{ number_format($item->quantity * 30, 0, ',', '.') }}
+                @else
+                    {{ number_format($item->quantity * 350000, 0, ',', '.') }}
+                @endif
+            </td>
+            {{-- TAMBAHKAN KEMBALI BLOK INI --}}
+            @if($invoice->type !== 'retribusi')
+                <td style="text-align: center;">-</td>
+            @endif
+            {{-- AKHIR BLOK TAMBAHAN --}}
+        </tr>
+        @endforeach
+    </tbody>
+</table>
 
         {{-- BAGIAN INFO PEMBAYARAN & TOTAL --}}
         <table class="info-table">
@@ -135,21 +167,26 @@
                 </td>
                 {{-- Info Total --}}
                 <td style="width: 50%; vertical-align: top;">
-                    <table class="totals-table">
-                        <tr>
-                            <td>SUB TOTAL</td>
-                            <td style="text-align: right;">Rp {{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
-                        </tr>
-                        <tr>
-                            <td>PPN</td>
-                            <td style="text-align: right;">-</td> {{-- Ganti jika ada data PPN --}}
-                        </tr>
-                        <tr>
-                            <td style="font-weight: bold;">Total</td>
-                            <td style="font-weight: bold; text-align: right;">Rp {{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
-                        </tr>
-                    </table>
-                </td>
+                  <table class="totals-table">
+                      <tr>
+                          <td>SUB TOTAL</td>
+                          <td style="text-align: right;">Rp {{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
+                      </tr>
+
+                      {{-- Sembunyikan PPN jika retribusi --}}
+                      @if($invoice->type !== 'retribusi')
+                      <tr>
+                          <td>PPN</td>
+                          <td style="text-align: right;">-</td>
+                      </tr>
+                      @endif
+
+                      <tr>
+                          <td style="font-weight: bold;">Total</td>
+                          <td style="font-weight: bold; text-align: right;">Rp {{ number_format($invoice->total_amount, 0, ',', '.') }}</td>
+                      </tr>
+                  </table>
+              </td>
             </tr>
         </table>
 

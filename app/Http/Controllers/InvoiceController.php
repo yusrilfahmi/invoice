@@ -24,10 +24,10 @@ class InvoiceController extends Controller
     // Menyimpan data & membuat PDF
     public function store(Request $request)
 {
-    // Tambahkan validasi untuk alamat pelanggan yang sudah ada
     $request->validate([
+        'type' => 'required|in:invoice,retribusi',
         'customer_id' => 'required_without:new_customer_name|nullable|exists:customers,id',
-        'customer_address' => 'nullable|string|max:255', // Validasi untuk alamat yang diedit
+        'customer_address' => 'nullable|string|max:255',
         'new_customer_name' => 'required_without:customer_id|nullable|string|max:255',
         'new_customer_address' => 'required_with:new_customer_name|nullable|string|max:255',
         'invoice_date' => 'required|date',
@@ -39,30 +39,35 @@ class InvoiceController extends Controller
         $customer = null;
 
         if ($request->filled('new_customer_name')) {
-            // Logika untuk pelanggan baru (tetap sama)
             $customer = Customer::create([
                 'name' => $request->new_customer_name,
                 'address' => $request->new_customer_address,
             ]);
         } else {
-            // --- AWAL PERUBAHAN LOGIKA UNTUK PELANGGAN LAMA ---
             $customer = Customer::findOrFail($request->customer_id);
-
-            // Cek jika ada alamat baru yang dikirim dari form, lalu perbarui
             if ($request->filled('customer_address')) {
                 $customer->address = $request->customer_address;
-                $customer->save(); // Simpan perubahan alamat ke database
+                $customer->save();
             }
-            // --- AKHIR PERUBAHAN ---
         }
 
-        // Sisa logika penyimpanan invoice tetap sama
         $totalAmount = 0;
-        foreach ($request->items as $item) {
-            $totalAmount += $item['quantity'] * $item['price'];
-        }
+        if ($request->type === 'retribusi') {
+    // Logika baru: Jumlahkan semua berat lalu kali 30
+    $totalWeight = 0;
+    foreach ($request->items as $item) {
+        $totalWeight += $item['quantity']; // 'quantity' di sini adalah berat
+    }
+    $totalAmount = $totalWeight * 30;
+} else {
+    // Logika lama untuk invoice biasa
+    foreach ($request->items as $item) {
+        $totalAmount += $item['quantity'] * 350_000;
+    }
+}
 
         $invoice = Invoice::create([
+            'type' => $request->type,
             'customer_id' => $customer->id,
             'invoice_number' => 'INV-' . time(),
             'invoice_date' => $request->invoice_date,
@@ -70,23 +75,26 @@ class InvoiceController extends Controller
         ]);
 
         foreach ($request->items as $itemData) {
-            // Ambil tanggal dari form (misal: "2025-07-26")
-            $itemDate = $itemData['name'];
-
-            // Buat format nama item yang baru
-            $formattedItemName = 'pembuangan sampah pemukiman tanggal ' . Carbon::parse($itemDate)->format('d/m/Y');
-
-            // Simpan data dengan nama item yang sudah diformat
+            // Definisikan $itemName dengan nilai default
+            $itemName = $itemData['name']; 
+            
+            // Jika jenisnya retribusi, ubah nilainya
+            if ($request->type === 'invoice') {
+                $itemName = 'pembuangan sampah pemukiman tanggal ' . Carbon::parse($itemData['name'])->format('d/m/Y');
+            } else if ($request->type === 'retribusi') {
+                $itemName = Carbon::parse($itemData['name'])->format('d/m/Y');
+            }
+            
+            // Simpan item hanya sekali
             $invoice->items()->create([
-                'name' => $formattedItemName, // Gunakan nama yang sudah diformat
+                'name' => $itemName,
                 'quantity' => $itemData['quantity'],
                 'price' => $itemData['price'],
                 'subtotal' => $itemData['quantity'] * $itemData['price'],
             ]);
         }
-
+        
         DB::commit();
-
         return redirect()->route('invoice.output', ['invoice' => $invoice, 'action' => $request->action]);
 
     } catch (\Exception $e) {

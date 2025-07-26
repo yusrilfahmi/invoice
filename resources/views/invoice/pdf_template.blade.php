@@ -83,14 +83,15 @@
         <table class="info-table">
             <tr>
                 <td style="width: 50%;">
+                <strong strong>PERUSAHAAN:</strong><br>
                     <strong>Bagas Khairudin</strong><br>
-                    Jl Kuma, Blok O Nomor 235<br>
+                    Jl Kurma, Blok O Nomor 235<br>
                     82232601312
                 </td>
                 <td style="width: 50%;">
                     <strong>PELANGGAN:</strong><br>
                     <strong>{{ $invoice->customer->name }}</strong><br>
-                    {{ $invoice->customer->address ?? 'Alamat tidak diisi' }}
+                    {{ $invoice->customer->address}}
                 </td>
             </tr>
         </table>
@@ -101,31 +102,24 @@
                 <tr>
                     <th>Nama</th>
                     <th>Jumlah</th>
-                    <th>Harga Satuan Per Rit</th>
+                    <th>Harga Satuan<br>
+                      Per Rit</th>
                     <th>SubTotal</th>
                     <th>PPN</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($invoice->items as $item)
-                <tr>
-                    <td>{{ $item->name }}</td>
-                    <td style="text-align: center;">{{ $item->quantity }}</td>
-                    <td style="text-align: right;">{{ number_format($item->price, 0, ',', '.') }}</td>
-                    <td style="text-align: center;">Tes</td> {{-- Ganti dengan data jika ada --}}
-                    <td style="text-align: center;">Tes</td> {{-- Ganti dengan data jika ada --}}
-                </tr>
-                @endforeach
-                {{-- Baris kosong untuk melengkapi tampilan agar mirip Excel --}}
-                @for ($i = $invoice->items->count(); $i < 3; $i++)
-                <tr>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                </tr>
-                @endfor
+                  <tr>
+                      <td>{{ $item->name }}</td>
+                      <td style="text-align: center;">{{ $item->quantity }}</td>
+                      <td style="text-align: right;">{{ number_format($item->price, 0, ',', '.') }}</td>
+                      {{-- Menghitung Jumlah * Harga --}}
+                      <td style="text-align: right;">{{ number_format($item->quantity * $item->price, 0, ',', '.') }}</td>
+                      {{-- Menampilkan tanda strip (-) --}}
+                      <td style="text-align: center;">-</td>
+                  </tr>
+                  @endforeach
             </tbody>
         </table>
 

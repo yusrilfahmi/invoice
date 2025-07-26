@@ -6,26 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up()
-{
-    Schema::create('invoice_items', function (Blueprint $table) {
-        $table->id();
-        $table->unsignedBigInteger('customer_id'); // Definisikan kolomnya dulu
-        $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade'); // Baru definisikan sambungannya
-        $table->string('name');
-        $table->integer('quantity');
-        $table->decimal('price', 15, 2);
-        $table->decimal('subtotal', 15, 2); // <-- TAMBAHKAN BARIS INI
-        $table->timestamps();
-    });
-}
+    {
+        Schema::create('invoices', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('customer_id');
+            $table->foreign('customer_id')->references('id')->on('customers')->onDelete('cascade');
+            $table->string('invoice_number')->unique();
+            $table->date('invoice_date');
+            $table->date('due_date')->nullable();
+            $table->decimal('total_amount', 15, 2)->default(0);
+            $table->enum('status', ['draft', 'sent', 'paid', 'overdue'])->default('draft');
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+    }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('invoices');

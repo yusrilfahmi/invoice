@@ -26,7 +26,7 @@
         <h1>Buat Invoice Baru</h1>
         <hr>
 
-        <form action="{{ route('invoices.store') }}" method="POST">
+        <form action="{{ route('invoices.store') }}" method="POST" target="_blank">
             @csrf
             <div x-data="invoiceForm()">
                 {{-- Info Pelanggan & Tanggal --}}
@@ -34,6 +34,10 @@
                     <div style="flex: 1;">
                         <label for="customer_name">Nama Pelanggan:</label>
                         <input type="text" id="customer_name" name="customer_name" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="address_name">Alamat Pelanggan:</label>
+                        <input type="text" id="address_name" name="address_name" required>
                     </div>
                     <div style="flex: 1;">
                         <label for="invoice_date">Tanggal Invoice:</label>
@@ -72,7 +76,18 @@
                 </div>
 
                 <hr>
-                <button type="submit">Simpan & Buat PDF</button>
+
+{{-- Input tersembunyi untuk memberitahu controller aksi apa yang dipilih --}}
+<input type="hidden" name="action" id="form-action">
+
+{{-- DUA TOMBOL BARU --}}
+<button type="submit" onclick="document.getElementById('form-action').value = 'preview'">
+    Preview
+</button>
+
+<button type="submit" onclick="document.getElementById('form-action').value = 'download'">
+    Download PDF
+</button>
             </div>
         </form>
     </div>

@@ -23,6 +23,7 @@ class InvoiceController extends Controller
         // Validasi data yang masuk dari form
         $request->validate([
             'customer_name' => 'required|string|max:255',
+            'address_name' => 'required|string|max:255',
             'invoice_date' => 'required|date',
             'items' => 'required|array|min:1',
             'items.*.name' => 'required|string',
@@ -34,8 +35,10 @@ class InvoiceController extends Controller
         DB::beginTransaction();
         try {
             // Cari atau buat customer baru
-            $customer = Customer::firstOrCreate(['name' => $request->customer_name]);
-
+            $customer = Customer::updateOrCreate(
+            ['name' => $request->customer_name],
+            ['address' => $request->address_name]
+        );
             // Hitung total dari semua item
             $totalAmount = 0;
             foreach ($request->items as $item) {
@@ -64,7 +67,7 @@ class InvoiceController extends Controller
             DB::commit(); // Jika semua berhasil, simpan permanen
 
             // Arahkan ke halaman download PDF
-            return redirect()->route('invoice.download', $invoice);
+            return redirect()->route('invoice.output', ['invoice' => $invoice, 'action' => $request->action]);
 
         } catch (\Exception $e) {
             DB::rollBack(); // Jika ada error, batalkan semua penyimpanan
@@ -73,7 +76,7 @@ class InvoiceController extends Controller
     }
 
     // Membuat dan men-download PDF
-    public function downloadPDF(Invoice $invoice)
+    public function downloadPDF(Invoice $invoice, $action)
     {
         // Load relasi agar bisa diakses di view PDF
         $invoice->load('customer', 'items'); 
@@ -86,7 +89,13 @@ class InvoiceController extends Controller
 
         // Ganti ini dengan nama file template PDF Anda
         $pdf = Pdf::loadView('invoice.pdf_template', ['invoice' => $invoice]);
+        
+        if ($action === 'preview') {
+            // Jika aksi adalah 'preview', tampilkan PDF di browser
+            return $pdf->stream($fileName);
+        }
 
         return $pdf->download($fileName);
+        // return $pdf->stream($fileName);
     }
 }

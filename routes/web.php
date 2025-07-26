@@ -3,11 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\InvoiceController;
 
-// Route untuk MENAMPILKAN form (metode GET)
+// 1. Menampilkan form
 Route::get('/', [InvoiceController::class, 'create'])->name('invoice.create');
 
-// Route untuk MENYIMPAN data dari form (metode POST)
+// 2. Menyimpan data dari form
 Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
 
-// Route untuk men-download PDF setelah disimpan
-Route::get('/invoices/{invoice}/download', [InvoiceController::class, 'downloadPDF'])->name('invoice.download');
+// 3. Menangani output (bisa preview atau download)
+Route::get('/invoices/{invoice}/output/{action}', [InvoiceController::class, 'handleOutput'])->name('invoice.output');

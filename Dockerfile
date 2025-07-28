@@ -1,40 +1,23 @@
-# Gunakan base image PHP 8.2 FPM yang ringan (Alpine)
-FROM php:8.2-fpm-alpine AS base
+FROM php:8.2-fpm
 
-# Install dependensi sistem dan ekstensi PHP yang umum untuk Laravel
-# Termasuk gd (untuk gambar) dan pdo_mysql/pgsql untuk database
-RUN apk add --no-cache \
-    curl \
-    libpng-dev \
-    libzip-dev \
-    libjpeg-turbo-dev \
-    zip \
-    unzip \
-    && docker-php-ext-configure gd --with-jpeg \
-    && docker-php-ext-install \
-    pdo pdo_mysql pdo_pgsql bcmath gd zip
+WORKDIR /var/www
 
-# Set direktori kerja di dalam container
-WORKDIR /var/www/html
+RUN apt-get update && apt-get install -y \
+    zip unzip curl git libxml2-dev libzip-dev libpng-dev libjpeg-dev libonig-dev \
+    sqlite3 libsqlite3-dev
 
-# Ambil Composer (package manager untuk PHP)
+RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd zip
+
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# --- Tahap Builder ---
-# Di tahap ini kita hanya fokus menginstall dependensi
-FROM base AS builder
-COPY . .
-# Install dependensi composer dan optimalkan autoloader
-RUN composer install --no-dev --no-interaction --no-plugins --no-scripts --prefer-dist \
-    && composer dump-autoload --optimize
+COPY . /var/www
+COPY --chown=www-data:www-data . /var/www
 
-# --- Tahap Final ---
-# Ini adalah image final yang akan dijalankan
-FROM base AS final
-COPY --from=builder /var/www/html .
+RUN chmod -R 755 /var/www
+RUN composer install
 
-# Expose port yang akan digunakan oleh Laravel
+COPY .env.example .env
+RUN php artisan key:generate
+
 EXPOSE 8000
-
-# Perintah untuk menjalankan server saat container dimulai
 CMD php artisan serve --host=0.0.0.0 --port=8000

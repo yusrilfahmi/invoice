@@ -75,24 +75,31 @@ class InvoiceController extends Controller
         ]);
 
         foreach ($request->items as $itemData) {
-            // Definisikan $itemName dengan nilai default
-            $itemName = $itemData['name']; 
-            
-            // Jika jenisnya retribusi, ubah nilainya
-            if ($request->type === 'invoice') {
-                $itemName = 'pembuangan sampah pemukiman tanggal ' . Carbon::parse($itemData['name'])->format('d/m/Y');
-            } else if ($request->type === 'retribusi') {
-                $itemName = Carbon::parse($itemData['name'])->format('d/m/Y');
-            }
-            
-            // Simpan item hanya sekali
-            $invoice->items()->create([
-                'name' => $itemName,
-                'quantity' => $itemData['quantity'],
-                'price' => $itemData['price'],
-                'subtotal' => $itemData['quantity'] * $itemData['price'],
-            ]);
-        }
+    // Definisikan $itemName dengan nilai default
+    $itemName = $itemData['name']; 
+    
+    // Jika jenisnya retribusi, ubah nilainya
+    if ($request->type === 'invoice') {
+        $itemName = 'pembuangan sampah pemukiman tanggal ' . Carbon::parse($itemData['name'])->format('d/m/Y');
+    } else if ($request->type === 'retribusi') {
+        $itemName = Carbon::parse($itemData['name'])->format('d/m/Y');
+    }
+    
+    // Tentukan harga berdasarkan type
+    if ($request->type === 'retribusi') {
+        $price = 30; // Harga tetap untuk retribusi
+    } else {
+        $price = 350_000; // Harga tetap untuk invoice
+    }
+    
+    // Simpan item dengan harga yang sudah ditentukan
+    $invoice->items()->create([
+        'name' => $itemName,
+        'quantity' => $itemData['quantity'],
+        'price' => $price,
+        'subtotal' => $itemData['quantity'] * $price,
+    ]);
+}
         
         DB::commit();
         return redirect()->route('invoice.output', ['invoice' => $invoice, 'action' => $request->action]);

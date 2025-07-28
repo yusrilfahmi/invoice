@@ -94,9 +94,11 @@
             <tr>
                 <td style="width: 50%;">
                 <strong strong>PERUSAHAAN:</strong><br>
-                    <strong>Bagas Khairudin</strong><br>
-                    Jl Kurma, Blok O Nomor 235<br>
-                    82232601312
+                    <strong>@if($invoice->type === 'retribusi') Sukayat @else Bagas Khairudin @endif</strong><br>
+                    {{-- <strong>Sukayat</strong><br> --}}
+                    Cerme Indah, Jl Kurma, RT 6 RW 4 Blok O Nomor 235<br>
+                    @if($invoice->type === 'retribusi') 081330397993 @else 082232601312 @endif
+                    
                 </td>
                 <td style="width: 50%;">
                     <strong>PELANGGAN:</strong><br>
@@ -161,9 +163,10 @@
                 {{-- Info Bank --}}
                 <td style="width: 50%; vertical-align: top;">
                     <strong>Pembayaran Transfer:</strong><br>
-                    Bank: BCA<br>
-                    No Rek: 82038472145<br>
-                    Atas Nama: Bagas Khairudin
+                    @if($invoice->type === 'retribusi') Atas Nama: Sukayat @else Atas Nama: Bagas Khairudin @endif<br>
+                    @if($invoice->type === 'retribusi') No Rek: <> @else No Rek: 1501157479 @endif<br>
+                    @if($invoice->type === 'retribusi') Bank: Bank Jatim @else Bank: BCA @endif
+                    
                 </td>
                 {{-- Info Total --}}
                 <td style="width: 50%; vertical-align: top;">

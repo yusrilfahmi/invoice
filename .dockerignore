@@ -1,0 +1,13 @@
+# Git
+.git
+.github
+
+# Lingkungan lokal
+.env
+/vendor
+/node_modules
+/public/storage
+
+# File konfigurasi Docker
+Dockerfile
+.dockerignore

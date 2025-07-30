@@ -145,6 +145,10 @@
                 <button type="submit" onclick="document.getElementById('form-action').value = 'download'">
                     Download PDF
                 </button>
+
+                <a href="{{ route('invoices.drafts') }}" style="background-color: #27ae60; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block;">
+        Cek Draft PDF
+    </a>
             </div>
         </form>
     </div>
